@@ -1,0 +1,33 @@
+name: Deploy to Google Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@a39236905f2c44b0276125729fb2d89dc3f05250
+      with:
+        version: 'latest'
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Build Docker image
+      run: |
+        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/codacy-app .
+
+    - name: Push Docker image
+      run: |
+        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/codacy-app
+
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy codacy-app --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/codacy-app --region us-west1 --platform managed --allow-unauthenticated
