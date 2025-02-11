@@ -1,6 +1,3 @@
-### Archivo `test_app.py`
-
-```python
 import unittest
 from app import app
 
@@ -10,8 +7,16 @@ class CodacyAppTestCase(unittest.TestCase):
         self.app = app.test_client()
         self.app.testing = True
 
-    def test_codacy_insights(self):
-        response = self.app.get('/codacy/github/remote_org_name')
+    def test_codacy_organization(self):
+        response = self.app.get('/codacy/organizations/gh/josebaezae')
+        self.assertEqual(response.status_code, 200)
+    
+    def test_codacy_repositories(self):
+        response = self.app.get('/codacy/repositories/gh/josebaezae')
+        self.assertEqual(response.status_code, 200)
+
+    def test_codacy_files(self):
+        response = self.app.get('/codacy/files/gh/josebaezae/test')
         self.assertEqual(response.status_code, 200)
 
 if __name__ == '__main__':
