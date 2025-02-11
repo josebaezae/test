@@ -1,10 +1,8 @@
 from flask import Flask, jsonify
 import requests
 import os
-from dotenv import load_dotenv
+from google.cloud import secretmanager
 from urllib.parse import urlparse, quote_plus
-
-load_dotenv()
 
 app = Flask(__name__)
 
@@ -28,6 +26,12 @@ def is_codacy_base_url_allowed(base_url):
 def validate_repo_name(repo_name):
     return repo_name.replace('-', '').replace('_', '').isalnum()
 
+def get_secret(secret_name):
+    client = secretmanager.SecretManagerServiceClient()
+    name = f"projects/{os.getenv('GOOGLE_CLOUD_PROJECT')}/secrets/{secret_name}/versions/latest"
+    response = client.access_secret_version(name=name)
+    return response.payload.data.decode('UTF-8')
+
 @app.after_request
 def add_header(response):
     response.headers['Vary'] = 'Cookie'
@@ -39,7 +43,7 @@ def get_codacy_organization(provider, remote_org_name):
         if not validate_repo_name(provider) or not validate_repo_name(remote_org_name):
             return jsonify({'error': 'Nombre de proveedor o de organización no válido'}), 400
 
-        codacy_api_token = os.getenv('CODACY_API_TOKEN')
+        codacy_api_token = get_secret('CODACY_API_TOKEN')
         headers = {
             'Accept': 'application/json',
             'api-token': codacy_api_token
@@ -69,7 +73,7 @@ def get_codacy_repositories(provider, remote_org_name):
         if not validate_repo_name(provider) or not validate_repo_name(remote_org_name):
             return jsonify({'error': 'Nombre de proveedor o de organización no válido'}), 400
 
-        codacy_api_token = os.getenv('CODACY_API_TOKEN')
+        codacy_api_token = get_secret('CODACY_API_TOKEN')
         headers = {
             'Accept': 'application/json',
             'api-token': codacy_api_token
@@ -99,7 +103,7 @@ def get_codacy_files(provider, remote_org_name, repo_name):
         if not validate_repo_name(provider) or not validate_repo_name(remote_org_name) or not validate_repo_name(repo_name):
             return jsonify({'error': 'Nombre de proveedor, organización o repositorio no válido'}), 400
 
-        codacy_api_token = os.getenv('CODACY_API_TOKEN')
+        codacy_api_token = get_secret('CODACY_API_TOKEN')
         headers = {
             'Accept': 'application/json',
             'api-token': codacy_api_token
@@ -125,5 +129,7 @@ def get_codacy_files(provider, remote_org_name, repo_name):
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
+# Para usarlo localmente
 #    app.run(host='127.0.0.1', port=8080)
+# Para usarlo en docker
      app.run(host='0.0.0.0', port=8080)
